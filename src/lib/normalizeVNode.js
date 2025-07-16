@@ -20,7 +20,7 @@ export function normalizeVNode(vNode) {
     return normalizeVNode(renderedVNode); // 재귀 실행
   }
 
-  // 조건 4. 객체 컴포넌트인 경우 재귀적 실행 (vNode가 {type, props, children} 구조를 가진 객체인 경우)
+  // 조건 4. 일반 VNode 객체인 경우 → children도 재귀적으로 normalize
   if (typeof vNode === "object" && vNode?.type) {
     return {
       ...vNode,
