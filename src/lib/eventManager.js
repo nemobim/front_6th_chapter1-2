@@ -7,30 +7,30 @@ const delegatedEvents = new Set();
  * @param {HTMLElement} root - 이벤트 리스너를 등록할 루트 엘리먼트
  */
 export function setupEventListeners(root) {
-  // 이미 이벤트가 한 번이라도 등록된 적 있다면 중복 등록 방지
-  if (root._eventHandlerInitialized) return;
+  // 이미 핸들러가 있으면 중복 등록 방지
+  if (root._eventHandler) {
+    return;
+  }
 
+  // 이벤트 핸들러 생성
+  root._eventHandler = function handleEvent(event) {
+    let target = event.target;
+
+    while (target && target !== root) {
+      const typeMap = eventMap.get(target);
+      if (typeMap && typeMap.has(event.type)) {
+        typeMap.get(event.type).forEach((handler) => {
+          handler.call(target, event);
+        });
+        return; // 핸들러 실행 후 종료
+      }
+      target = target.parentElement;
+    }
+  };
+
+  // 리스너 등록
   delegatedEvents.forEach((eventType) => {
-    root.addEventListener(
-      eventType,
-      (event) => {
-        let target = event.target;
-
-        while (target && target !== root) {
-          const typeMap = eventMap.get(target);
-
-          if (typeMap && typeMap.has(eventType)) {
-            typeMap.get(eventType).forEach((handler) => {
-              handler.call(target, event);
-            });
-          }
-
-          if (event.cancelBubble) break;
-          target = target.parentElement;
-        }
-      },
-      false,
-    );
+    root.addEventListener(eventType, root._eventHandler, false);
   });
 }
 
