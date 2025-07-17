@@ -2,36 +2,38 @@
 const eventMap = new WeakMap();
 // 전체 시스템에서 사용 중인 이벤트 타입들 추적
 const delegatedEvents = new Set();
+// 루트 요소 저장
+let rootElement = null;
 
 /**
  * @param {HTMLElement} root - 이벤트 리스너를 등록할 루트 엘리먼트
  */
 export function setupEventListeners(root) {
-  // 이미 핸들러가 있으면 중복 등록 방지
-  if (root._eventHandler) {
-    return;
-  }
-
-  // 이벤트 핸들러 생성
-  root._eventHandler = function handleEvent(event) {
-    let target = event.target;
-
-    while (target && target !== root) {
-      const typeMap = eventMap.get(target);
-      if (typeMap && typeMap.has(event.type)) {
-        typeMap.get(event.type).forEach((handler) => {
-          handler.call(target, event);
-        });
-        return; // 핸들러 실행 후 종료
-      }
-      target = target.parentElement;
-    }
-  };
+  // 루트 요소 저장
+  rootElement = root;
 
   // 리스너 등록
   delegatedEvents.forEach((eventType) => {
-    root.addEventListener(eventType, root._eventHandler, false);
+    rootElement.removeEventListener(eventType, handleEvent);
+    root.addEventListener(eventType, handleEvent, false);
   });
+}
+
+// 이벤트 핸들러 생성
+function handleEvent(event) {
+  let target = event.target;
+
+  while (target && target !== rootElement) {
+    const eventTypeMap = eventMap.get(target);
+    if (eventTypeMap) {
+      const handlers = eventTypeMap.get(event.type);
+      if (handlers) {
+        handlers.forEach((handler) => handler(event));
+        return;
+      }
+    }
+    target = target.parentElement;
+  }
 }
 
 /**
@@ -54,11 +56,24 @@ export function addEvent(element, eventType, handler) {
     elementEvents.set(eventType, new Set());
   }
 
-  // 이벤트 핸들러 등록 (중복 방지됨: Set이기 때문에 동일한 함수는 한 번만 등록됨)
+  // 이벤트 핸들러 등록
   elementEvents.get(eventType).add(handler);
 
-  // 등록할때 이벤트 타입 추가
-  delegatedEvents.add(eventType);
+  // 새로운 이벤트 타입이면 delegatedEvents에 추가하고 루트에 리스너 재등록
+  if (!delegatedEvents.has(eventType)) {
+    delegatedEvents.add(eventType);
+
+    // 루트 요소를 찾아서 새로운 이벤트 타입 리스너 등록
+    let current = element;
+    while (current) {
+      if (current._eventHandler) {
+        current.removeEventListener(eventType, current._eventHandler);
+        current.addEventListener(eventType, current._eventHandler, false);
+        break;
+      }
+      current = current.parentElement;
+    }
+  }
 }
 
 /**

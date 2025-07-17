@@ -9,10 +9,9 @@ export function createElement(vNode) {
   // 배열인 경우 → DocumentFragment 생성 후 재귀 렌더링
   if (Array.isArray(vNode)) {
     const fragment = document.createDocumentFragment();
-    for (const child of vNode) {
-      const el = createElement(child);
-      if (el) fragment.appendChild(el);
-    }
+    vNode.forEach((child) => {
+      fragment.appendChild(createElement(child));
+    });
     return fragment;
   }
 
@@ -23,7 +22,6 @@ export function createElement(vNode) {
 
   // 문자열 또는 숫자 → 텍스트 노드로 변환
   if (typeof vNode === "string" || typeof vNode === "number") {
-    console.log("vNode", vNode);
     return document.createTextNode(vNode.toString());
   }
 
@@ -31,42 +29,44 @@ export function createElement(vNode) {
   if (typeof vNode.type === "string") {
     const el = document.createElement(vNode.type);
 
-    // 속성 설정
-    const props = vNode.props || {};
-    for (const [key, value] of Object.entries(props)) {
-      if (key === "className") {
-        // className 속성 처리
-        el.className = value;
-      } else if (key === "style") {
-        // style 속성 처리
-        el.style.cssText = value;
-      } else if (key.startsWith("on") && typeof value === "function") {
-        // onClick 속성 처리
-        const eventType = key.toLowerCase().slice(2); // onClick -> click
-        addEvent(el, eventType, value);
-      } else if (typeof value === "boolean") {
-        // 불리언 속성 (예: disabled)
-        el[key] = value;
-      } else {
-        // 일반 속성
-        el.setAttribute(key, value);
-      }
-    }
+    //props 처리
+    updateAttributes(el, vNode.props ?? {});
 
-    // 자식 요소 처리
-    for (const child of vNode.children || []) {
-      const childEl = createElement(child); // 재귀
-      el.appendChild(childEl); // childEl도 Node
-    }
+    //자식요소 처리
+    (vNode.children || []).forEach((child) => {
+      el.appendChild(createElement(child));
+    });
 
     return el;
   }
+
   // 지원하지 않는 입력은 에러 발생
   throw new Error("지원하지 않는 입력입니다.");
 }
 
+/**
+ * 요소의 속성(props) 및 이벤트를 설정하는 함수
+ * @param {HTMLElement} $el - 속성을 설정할 요소
+ * @param {object} props - 설정할 속성들
+ */
 function updateAttributes($el, props) {
-  console.log("addEvent", addEvent, $el, props);
+  Object.entries(props).forEach(([key, value]) => {
+    if (key.startsWith("on") && typeof value === "function") {
+      // onClick 속성 처리
+      const eventType = key.toLowerCase().slice(2); // onClick -> click
+      addEvent($el, eventType, value);
+    } else if (key === "className") {
+      // className 속성 처리 - property로 설정
+      $el.setAttribute("class", value);
+    } else if (typeof value === "boolean") {
+      // 불리언 속성 (예: disabled)
+      $el[key] = Boolean(value);
+    } else if (key === "style" && typeof value === "object") {
+      // style 속성 처리
+      Object.assign($el.style, value);
+    } else {
+      // 일반 속성
+      $el.setAttribute(key, value);
+    }
+  });
 }
-
-console.log(updateAttributes);

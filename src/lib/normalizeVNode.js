@@ -16,24 +16,14 @@ export function normalizeVNode(vNode) {
 
   // 조건 3. 함수 컴포넌트인 경우 재귀적 실행
   if (typeof vNode.type === "function") {
-    const props = {
-      ...(vNode.props || {}),
-      children: vNode.children,
-    };
-
-    const renderedVNode = vNode.type(props);
-    return normalizeVNode(renderedVNode); // 재귀 실행
+    return normalizeVNode(vNode.type({ ...vNode.props, children: vNode.children }));
   }
 
   // 조건 4. 일반 VNode 객체인 경우 → children도 재귀적으로 normalize
-  if (typeof vNode === "object" && vNode?.type) {
-    const normalized = {
-      ...vNode,
-      children: (vNode.children || []).map(normalizeVNode),
-    };
+  const normalized = {
+    ...vNode,
+    children: (vNode.children || []).map(normalizeVNode).filter(Boolean),
+  };
 
-    return normalized;
-  }
-
-  return vNode;
+  return normalized;
 }
