@@ -1,6 +1,7 @@
-import { createElement } from "./createElement";
+//import { createElement } from "./createElement";
 import { setupEventListeners } from "./eventManager";
 import { normalizeVNode } from "./normalizeVNode";
+import { updateElement } from "./updateElement";
 // import { updateElement } from "./updateElement";
 
 /**
@@ -12,12 +13,9 @@ export function renderElement(vNode, container) {
   // vNode 정규화
   const normalizedVNode = normalizeVNode(vNode);
 
-  // DOM 생성
-  const dom = createElement(normalizedVNode);
-
-  // 컨테이너 비우고 새 DOM 추가 (기존 방식)
-  container.innerHTML = "";
-  container.appendChild(dom);
+  // 이전 상태와 비교하여 DOM 업데이트
+  updateElement(container, normalizedVNode, container._vnode);
+  container._vnode = normalizedVNode;
 
   setupEventListeners(container);
 }
